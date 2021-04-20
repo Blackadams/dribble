@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<script>
+$(document).ready(function() {
+
+    // enter to login
+    $(document).on('keypress',function(e) {
+        if(e.which == 13) {
+            $("#login-button").click();
+        }
+    });
+
+
+    // call api
+    $("#login-button").click(function() {
+        var formData = $('form').serializeArray();
+
+        $.post( "/api/auth/login", formData)
+            .done(function( response ) {
+                if(response.status == "success") {
+                    window.location.replace("/dashboard");
+                }
+                else {
+                    $("#warning").removeAttr('hidden');
+                    $("#warning-text").text(response.message);
+                }
+        });
+    });
+
+});
+</script>
+
+<html>
+    <body class="d-flex align-items-center">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-12 col-md-5 col-xl-6">
+                    <h2 class="mb-1">Login</h2>
+                    <p class="text-muted">Please enter your login credentials.</p>
+
+                    <div class="card">
+                        <div class="card-body">
+
+                            <div class="input-group mb-3" id="warning" hidden>
+                                <span class="badge bg-danger" id="warning-text" >Invalid credentials.</span>
+                            </div>
+
+                            <form>
+                                <div class="input-group mb-3">
+                                    {{ login_form.csrf_token }}
+                                    {{ login_form.username_login(size=20, class='form-control', placeholder='Username') }}
+                                    <div class="input-group-text">
+                                        <span class="bi bi-person-fill"></span>
+                                    </div>
+                                </div>
+
+                                <div class="input-group mb-3">
+                                    {{ login_form.password_login(size=20, class='form-control', placeholder='Password') }}
+                                    <div class="input-group-text">
+                                        <span class="bi bi-key-fill"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group form-check" style="padding-bottom: 1vh;">
+                                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                                    <label class="form-check-label" for="remember">Remember my session</label>
+                                </div>
+
+                                <button type="button" id="login-button" class="btn btn-primary w-100">
+                                    <i class="bi bi-unlock-fill"></i>
+                                    Log in
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+
+{% endblock %}

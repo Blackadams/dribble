@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<script>
+$(document).ready(function() {
+
+    // enter to register
+    $(document).on('keypress',function(e) {
+        if(e.which == 13) {
+            $("#register-button").click();
+        }
+    });
+
+    // call api
+    $("#register-button").click(function() {
+        var formData = $('form').serializeArray();
+
+        $.post( "/api/users/create", formData)
+            .done(function( response ) {
+                console.log(response);
+                var warning_text = $("#warning-text")
+                if(response.status == "success") {
+                    warning_text.removeClass("bg-danger");
+                    warning_text.addClass("bg-success");
+                }
+                else {
+                    warning_text.removeClass("bg-success");
+                    warning_text.addClass("bg-danger");
+                }
+                $("#warning").removeAttr('hidden');
+                warning_text.text(response.message);
+        });
+    });
+
+});
+</script>
+
+<html>
+    <body class="d-flex align-items-center">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-12 col-md-5 col-xl-6">
+                    <h2 class="mb-1">Register</h2>
+                    <p class="text-muted">Create an account.</p>
+
+                    <div class="card">
+                        <div class="card-body">
+
+                            <div class="input-group mb-3" id="warning" hidden>
+                                <span class="badge bg-danger" id="warning-text" >Invalid credentials.</span>
+                            </div>
+
+                            <form>
+                                {{ register_form.csrf_token }}
+                                <div class="row">
+                                    <div class="col">
+                                        <div class="input-group mb-3">
+                                            {{ register_form.first_name_register(size=20, class='form-control', placeholder='First Name') }}
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="input-group mb-3">
+                                            {{ register_form.last_name_register(size=20, class='form-control', placeholder='Last Name') }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="input-group mb-3">
+                                     {{ register_form.username_register(size=20, class='form-control', placeholder='Username') }}
+                                    <div class="input-group-text">
+                                        <span class="bi bi-person-fill"></span>
+                                    </div>
+                                </div>
+
+                                <div class="input-group mb-3">
+                                    {{ register_form.email_register(size=20, class='form-control', placeholder='Email') }}
+                                    <div class="input-group-text">
+                                        <span class="bi bi-envelope-fill"></span>
+                                    </div>
+                                </div>
+
+                                <div class="input-group mb-3">
+                                    {{ register_form.password_register(size=20, class='form-control', placeholder='Password') }}
+                                    <div class="input-group-text">
+                                        <span class="bi bi-key-fill"></span>
+                                    </div>
+                                </div>
+
+                                <div class="input-group mb-3">
+                                    {{ register_form.confirm_password_register(size=20, class='form-control', placeholder='Confirm Password') }}
+                                    <div class="input-group-text">
+                                        <span class="bi bi-key-fill"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group form-check" style="padding-bottom: 1vh;">
+                                    {{ register_form.tos_agreement(size=20, class='form-check-input', id="remember") }}
+                                    <label class="form-check-label" for="remember">I agree to the <a href="/terms">Terms of Service</a>.</a></label>
+                                </div>
+
+                                <button type="button" id="register-button" class="btn btn-primary w-100">
+                                    <i class="bi bi-person-fill"></i>
+                                    Register
+                                </button>
+
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+
+</html>
+{% endblock %}

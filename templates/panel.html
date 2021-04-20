@@ -1,0 +1,844 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<html>
+
+    <script>
+        function createCookie(name, value, days) {
+            var expires;
+            if (days) {
+                var date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toGMTString();
+            }
+            else {
+                expires = "";
+            }
+            document.cookie = name + "=" + value + expires + "; path=/";
+        }
+
+        function getCookie(c_name) {
+            if (document.cookie.length > 0) {
+                c_start = document.cookie.indexOf(c_name + "=");
+                if (c_start != -1) {
+                    c_start = c_start + c_name.length + 1;
+                    c_end = document.cookie.indexOf(";", c_start);
+                    if (c_end == -1) {
+                        c_end = document.cookie.length;
+                    }
+                    return unescape(document.cookie.substring(c_start, c_end));
+                }
+            }
+            return "";
+        }
+
+        function openTab(tabName) {
+            if (!document.getElementsByClassName(tabName)[0]) {
+                return;
+            }
+
+            var content_tabs = document.getElementsByClassName('content-tab');
+            var buttons = document.querySelectorAll('li > a');
+
+            for (var i = 0; i < content_tabs.length; i++) {
+                content_tabs[i].style.display = 'none';
+            }
+
+            for (var i = 0; i < buttons.length; i++) {
+                if (buttons[i].className == 'nav-link active') {
+                    buttons[i].className = 'nav-link';
+                }
+            }
+
+            document.getElementsByClassName(tabName)[0].style.display = 'block';
+            document.getElementById(tabName).className = 'nav-link active';
+
+            // set the current_tab name inside of a cookie
+            createCookie("current_tab", tabName, 30);
+        }
+
+        document.addEventListener("DOMContentLoaded", function(event) {
+
+            // when the website loads, set the current tab from the cookie
+            openTab(getCookie("current_tab"));
+
+            var buttons = document.querySelectorAll('li > a');
+
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].style.cursor = "pointer";
+            }
+        });
+
+        function purchase(event) {
+            const id = event.currentTarget;
+            console.log(id);
+        }
+
+        function showAlert(text){
+            $("#modalText").text(text);
+            $("#exampleModalCenter").modal('show');
+        }
+
+        function showCreateTicketModal() {
+            $("#createTicketModal").modal('show');
+        }
+
+    </script>
+
+    <style>
+        .card {
+            height: 500px;
+        }
+
+		.bottom-button {
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			margin: 16px;
+		}
+
+    </style>
+
+<style>
+    .list-group{
+        max-height: 300px;
+        margin-bottom: 10px;
+        overflow:scroll;
+        -webkit-overflow-scrolling: touch;
+    }
+  </style>
+
+<!-- notification modal -->
+<div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLongTitle">Alert</h5>
+            </div>
+            <div class="modal-body" id="modalText">
+                Please check your new email for a link to confirm this change.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- create ticket modal -->
+<div class="modal fade" id="createTicketModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLongTitle">Create a Ticket</h5>
+            </div>
+            <div class="modal-body" id="modalText">
+                <div class="input-group mb-3">
+                    <input class="form-control" type="text" name="subject" id="createTicketSubject" placeholder="Subject" required>
+                </div>
+                <div class="input-group mb-3">
+                    <textarea style="width:100%;height:5rem;resize:none;margin-bottom: 1rem;" id="createTicketText" required></textarea>
+                </div>
+
+                <button type="submit" onclick="createTicket()" class="btn btn-primary w-100">
+                <i class="bi bi-envelope-fill"></i>
+                        Submit
+                </button>
+
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    /* ticket functions */
+
+    // remove modal items when it's closed
+    $(document).ready(function() {
+        $("#ticketModal").on('hidden.bs.modal', function(e) {
+            $("#discussionList").empty();
+            $("#replyButtons").empty();
+        });
+    });
+
+    function createTicket() {
+        const body = $("#createTicketText").val();
+        const subject = $("#createTicketSubject").val();
+        $.ajax({
+            contentType: "application/json",
+            url: '/api/tickets/create',
+            type: 'POST',
+            data: JSON.stringify({
+                'subject': subject,
+                'body': body
+            }),
+            success: function (result) {
+                console.log(result);
+                alert(result.message);
+                location.reload();
+            },
+            error: function (result) {
+                alert(result.message);
+            }
+        });   //end ajax
+    }
+
+    function replyTicket(id) {
+        const body = $("#replyTextArea").val();
+
+        $.ajax({
+            contentType: "application/json",
+            url: '/api/tickets/reply',
+            type: 'POST',
+            data: JSON.stringify({
+                'id': id,
+                'body': body
+            }),
+            success: function (result) {
+                alert("Reply was successfully sent.");
+                $('#ticketModal').modal('toggle');
+            },
+            error: function (result) {
+                alert(result.responseJSON.message);
+            }
+        });   //end ajax
+    }
+
+    function markAsResolved(id) {
+        $.ajax({
+            contentType: "application/json",
+            url: '/api/tickets/update_status',
+            type: 'POST',
+            data: JSON.stringify({
+                'id': id
+            }),
+            success: function (result) {
+                alert("Marked as resolved.");
+                location.reload();
+            },
+            error: function (result) {
+                alert(result.responseJSON.message);
+            }
+        });   //end ajax
+    }
+
+
+
+    function showTicket(iden) {
+        // alter ticket modal to fit data
+        var ticket = null;
+        var modal = $("ticketModal");
+
+        $.ajax({
+            contentType: "application/json",
+            url: '/api/tickets/get_one',
+            type: 'POST',
+            data: JSON.stringify({'id': iden}),
+            success: function (result) {
+                $("#ticketSubject").text(result.subject);
+
+                $.each(result.discussion.reverse(), function(key, value) {
+                    $("#discussionList").append(
+                        '<div class="container">'
+                           + '<h5 class="mb-1" style="font-size:large">'
+                               + value.author
+                           + '</h5>'
+                           + '<span class="badge bg-secondary">' + value.timestamp + '</span>'
+                           + '<p style="margin:1rem;">'
+                              + value.body
+                           + '</p>'
+                        + '</div>'
+                    );
+                });
+
+                $("#replyButtons").append(
+                    '<div class="col">'
+                        + '<button type="button" class="btn btn-primary w-100" onclick="replyTicket(\'' + result._id +'\')">Reply</button>'
+                  + '</div>'
+                  + '<div class="col">'
+                        + '<button type="button" class="btn btn-success w-100" onclick="markAsResolved(\'' + result._id + '\')">Mark as Resolved</button>'
+                  + '</div>'
+                );
+
+            },
+            error: function (result) {
+                alert("error!");
+            }
+        });   //end ajax
+
+        $("#ticketModal").modal('show');
+
+    }
+</script>
+
+<!-- ticket modal-->
+<div class="modal fade" id="ticketModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+        <div class="modal-content" style="height: 46rem;">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Ticket
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="card" style="height:100%;">
+                    <div id="ticketSubject" class="card-header">
+                        ticket_subject
+                      </div>
+
+                      <div class="card" style="margin:1rem;height:20rem;">
+                        <div class="card-header">
+                            Discussion
+                        </div>
+                        <div class="card-body list-group" id="discussionList" style="margin: 1rem;">
+
+                        </div>
+                      </div>
+
+                      <div class="card" style="margin:1rem;height:13rem;">
+                        <div class="card-header">
+                            Reply
+                        </div>
+                        <div class="card-body">
+                            <textarea id="replyTextArea" style="width:100%;height:5rem;resize:none;margin-bottom: 1rem;"></textarea>
+                            <div class="row" id="replyButtons">
+
+                            </div>
+                         </div>
+
+                      </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<body class="d-flex">
+    <div class="container align-self-center">
+        <h2 class="mb-1">Dashboard</h2>
+        <p class="text-muted">Welcome back, {{ session['user']['username'].capitalize() }}.</p>
+        <div class="card-columns d-flex justify-content-center">
+
+
+                <div class="card p-2" style="width: 15em;">
+                    <div class="card-body">
+                        <ul class="nav nav-pills flex-column">
+                            <p>Account</p>
+                            <li class="nav-item">
+                                <a class="nav-link active" id="home" onclick='openTab("home")'>Home</a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" id="tickets" onclick='openTab("tickets")'>Tickets</a>
+                            </li>
+
+
+                            <li class="nav-item">
+                                <a class="nav-link" id="logout-page" href="/logout">Logout</a>
+                            </li>
+
+                            <p style="padding-top: 1rem;">Upgrades</p>
+                            <li class="nav-item">
+                                <a class="nav-link" id="products" onclick='openTab("products")'>Products</a>
+                            </li>
+
+                            {% if 'admin' in session['user']['roles'] %}
+                            <p style="padding-top: 1rem;">Admin</p>
+                            <li class="nav-item">
+                                <a class="nav-link" id="users" onclick='openTab("users")'>Users</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="invitations" onclick='openTab("invitations")'>Invites</a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" id="settings" onclick='openTab("settings")'>Settings</a>
+                            </li>
+                            {% endif %}
+
+
+                        </ul>
+                    </div>
+            </div>
+            <style>
+                .home-card {
+                    height: 29rem;
+                    width: 50%;
+                }
+            </style>
+
+                <div class="card p-8" style="margin-left: 1em;width:80em;">
+                    <div class="card-body">
+                        <div class='column content-tab home'>
+                            <div class="card-columns d-flex">
+                                <div class="card home-card">
+                                    <div class="card-header">
+                                        Account
+                                      </div>
+                                    <div class="card-body">
+
+                                        <div class="card" style="height: 8rem;">
+
+                                              <div class="card-body">
+                                                <div class="input-group mb-3">
+                                                    <input class="form-control" type="email" name="email" placeholder="New Email" required>
+                                                    <div class="input-group-text">
+                                                        <span class="bi bi-envelope-fill"></span>
+                                                    </div>
+                                                </div>
+
+                                                <button type="submit" class="btn btn-primary w-100" onclick='showAlert("Please check your new email to confirm this change.")'>
+                                                    <i class="bi bi-lock-fill"></i>
+                                                    Change Email
+                                                </button>
+                                              </div>
+                                            </div>
+
+                                            <div class="card" style="height: 15.5rem;margin-top:1rem;">
+
+                                                <div class="card-body">
+
+                                                <div class="input-group mb-3">
+                                                    <input class="form-control" type="password" name="password" placeholder="Current Password" required>
+                                                    <div class="input-group-text">
+                                                        <span class="bi bi-key-fill"></span>
+                                                    </div>
+                                                </div>
+
+                                                  <div class="input-group mb-3">
+                                                      <input class="form-control" type="password" name="password" placeholder="New Password" required>
+                                                      <div class="input-group-text">
+                                                          <span class="bi bi-key-fill"></span>
+                                                      </div>
+                                                  </div>
+
+                                                  <div class="input-group mb-3">
+                                                      <input class="form-control" type="password" name="confirm_password" placeholder="Confirm New Password" required>
+                                                      <div class="input-group-text">
+                                                          <span class="bi bi-key-fill"></span>
+                                                      </div>
+                                                  </div>
+
+                                                  <button type="submit" class="btn btn-primary w-100" onclick='showAlert("Your password has been changed.")'>
+                                                      <i class="bi bi-lock-fill"></i>
+                                                      Reset Password
+                                                  </button>
+                                                </div>
+                                              </div>
+
+
+                                    </div>
+
+                                </div>
+
+                                <script>
+                                    $(document).ready(function() {
+                                        // populate logsList
+                                        $.get( "/api/logs/get")
+                                            .done(function(response) {
+                                            $.each(response.reverse(), function(key, value) {
+                                                $("#logsList").append(
+
+                                                    '<li class="list-group-item">'
+                                                        + '<span class="badge bg-secondary" style="margin-right: .3rem;">' + value.timestamp + '</span>'
+                                                        + value.message
+                                                  + '</li>'
+
+                                                );
+                                            });
+                                        });
+
+                                    });
+                                </script>
+
+                                <div class="card home-card" style="margin-left: 1rem;">
+                                    <div class="card" style="margin: 1rem;height:16rem;">
+                                        <div class="card-header">
+                                            Logs
+                                          </div>
+
+                                            <ul class="list-group list-group-flush" id="logsList">
+
+                                            </ul>
+                                    </div>
+                                    <div class="card" style="margin: 1rem;height:8rem;">
+                                        <div class="card-header">
+                                            Subscription Status
+                                            {% if datetime.now() < datetime.strptime(session['user']['subscribed_until'], '%Y-%m-%d %H:%M:%S') %}
+                                            <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                            {% endif %}
+                                          </div>
+                                        <div class="card-body">
+                                            <p class="card-title">
+                                                Expires
+                                                <span class="badge bg-secondary">{{ session['user']['subscribed_until'] }}</span>
+                                            </p>
+                                            <a style="font-size: 14px;" href="" onclick='openTab("products")'>Extend your subscription.</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class='column content-tab products' style="display: none;">
+                            <style>
+                                .product {
+                                    height: 29em;
+                                    width: 29em;
+                                }
+                            </style>
+
+                            <div class="card-columns d-flex">
+                                <div class="card product">
+                                    <img class="card-img-top" src="https://image-cdn.essentiallysports.com/wp-content/uploads/20200331012052/CSGO.jpg" alt="Card image cap">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Counter-Strike: Global Offensive</h5>
+                                        <p class="card-text">A premium, feature rich internal.</p>
+
+                                        <form action="#">
+                                            <div class="row">
+                                                <div class="col">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="exampleRadios" id="30day" value="30" checked>
+                                                        <label class="form-check-label" for="30day">
+                                                        30 days
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="exampleRadios" id="120day" value="120">
+                                                        <label class="form-check-label" for="120day">
+                                                        120 days
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="exampleRadios" id="90day" value="90">
+                                                        <label class="form-check-label" for="90day">
+                                                        90 days
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="exampleRadios" id="365day" value="365">
+                                                        <label class="form-check-label" for="365day">
+                                                        365 days
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="bottom-button">
+                                                <button class="btn btn-success w-100" onclick="purchase(event)">
+                                                <i class="bi bi-cash"></i>
+                                                        Purchase
+                                                </button>
+                                            </div>
+                                        </form>
+
+                                    </div>
+                                </div>
+
+                                <div class="card product" style="margin-left:1em;">
+                                    <img class="class-img-top" style="border-top-left-radius: 3px;border-top-right-radius:3px;"
+                                          src="https://www.wepc.com/wp-content/uploads/2020/06/Riot-Games-Prototyping-Valorant-Console-Port-But-Wont-Sacrifice-Core-Experience-768x432.jpg">
+
+                                    <div class="card-body">
+                                        <h5 class="card-title">Valorant</h5>
+                                        <p class="card-text">An premium, undetectable external.</p>
+
+                                        <form action="/api/purchase" method="POST">
+                                            <div class="row">
+                                                <div class="col">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="exampleRadios" id="30day" value="30" checked>
+                                                        <label class="form-check-label" for="30day">
+                                                        30 days
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="exampleRadios" id="120day" value="120">
+                                                        <label class="form-check-label" for="120day">
+                                                        120 days
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="exampleRadios" id="90day" value="90">
+                                                        <label class="form-check-label" for="90day">
+                                                        90 days
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="exampleRadios" id="365day" value="365">
+                                                        <label class="form-check-label" for="365day">
+                                                        365 days
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="bottom-button">
+                                                <button type="submit" class="btn btn-success w-100">
+                                                <i class="bi bi-cash"></i>
+                                                        Purchase
+                                                </button>
+                                            </div>
+                                        </form>
+
+
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- ticket tab -->
+                        <script>
+                            $(document).ready(function() {
+                                $.get( "/api/tickets/get")
+                                    .done(function(response) {
+                                        var formatted = [];
+                                        $.each(response, function(key, value) {
+
+                                            // format data and populate bootstrap-table
+                                            const subject = '<button onclick="showTicket(\'' + value._id + '\')" type="button" class="btn btn-link">' + value.subject + '</button>';
+                                            const resolved = '<span class="badge bg-success" id="resolved">Resolved</span>';
+                                            const unresolved = '<span class="badge bg-danger" id="resolved">Unresolved</span>'
+                                            if(value.resolved) {
+                                                formatted.push({
+                                                    author: value.author,
+                                                    subject: subject,
+                                                    creation_date: value.creation_date,
+                                                    resolved: resolved
+                                                });
+                                            } else {
+                                                formatted.push({
+                                                    author: value.author,
+                                                    subject: subject,
+                                                    creation_date: value.creation_date,
+                                                    resolved: unresolved
+                                                });
+                                            }
+
+                                        });
+                                        $("#ticket-table").bootstrapTable('load', formatted);
+
+                                });
+                            });
+                        </script>
+                        <div class='column content-tab tickets' style="display: none;">
+                            <div class="card" style="height:100%;">
+                                <div class="card-header">
+                                    Tickets
+                                  </div>
+                                  <div class="card-body">
+                                    <span class="badge bg-secondary">Hardware Identifier: {{ session['user']['hwid'] }}</span>
+
+                                    <table
+                                        class="table table-bordered"
+                                        data-search="true"
+                                        data-toggle="table"
+                                        data-search-align="left"
+                                        data-height="315"
+                                        id="ticket-table">
+
+                                        <thead>
+                                            <tr>
+                                                <th data-field="subject">Subject</th>
+                                                <th data-field="author">Author</th>
+                                                <th data-field="creation_date" data-sortable="true">Date Created</th>
+                                                <th data-field="resolved">Resolved</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+
+                                        </tbody>
+
+                                  </table>
+
+                                  <div class="bottom-button">
+                                    <button type="submit" onclick="showCreateTicketModal()" class="btn btn-primary w-100">
+                                    <i class="bi bi-envelope-fill"></i>
+                                            Create a Ticket
+                                    </button>
+                                    </div>
+                                  </div>
+                            </div>
+
+                        </div>
+
+                        {% if 'admin' in session['user']['roles'] %}
+                        <div class='column content-tab users' style="display: none;">
+
+                            <div class="card" style="height:29rem;">
+                                <div class="card-header">
+                                    Users
+                                  </div>
+                                  <div class="container" style="margin:1rem;width:96.5%;">
+                                    <table
+                                    class="table table-bordered"
+                                    data-toggle="table"
+                                    data-search="true"
+                                    data-search-align="left"
+                                    data-height="390">
+
+                                        <thead>
+                                            <tr>
+                                                <th data-sortable="true">Username</th>
+                                                <th>Email</th>
+                                                <th>Hardware Identifier</th>
+                                                <th>Roles</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>admin</td>
+                                                <td>example@example.com</td>
+                                                <td>00000-00000-00000-00000-00000</td>
+                                                <td>
+                                                    <span class="badge bg-danger">Admin</span>
+                                                    <span class="badge bg-success">Active</span>
+
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>user_with_subscription</td>
+                                                <td>example@example.com</td>
+                                                <td>00000-00000-00000-00000-00000</td>
+                                                <td>
+                                                    <span class="badge bg-success">Active</span>
+
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>user_with_beta</td>
+                                                <td>example@example.com</td>
+                                                <td>00000-00000-00000-00000-00000</td>
+                                                <td>
+                                                    <span class="badge bg-success">Active</span>
+                                                    <span class="badge bg-primary">Beta</span>
+
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>user_without_subscription</td>
+                                                <td>example@example.com</td>
+                                                <td>00000-00000-00000-00000-00000</td>
+                                                <td>
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class='column content-tab settings' style="display: none;">
+                            <div class="row">
+
+                                <div class="col-sm">
+
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" checked>
+                                        <label class="form-check-label">Invitation required</label>
+                                    </div>
+
+                                </div>
+
+                                <div class="col-sm">
+
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox">
+                                        <label class="form-check-label">Maintenance mode</label>
+                                    </div>
+
+							    </div>
+                                <div class="container" style="padding-top:1rem;">
+                                    <div class="input-group mb-3">
+                                        <input class="form-control" type="text" name="stripe_api_key" placeholder="Stripe API Key" required>
+                                        <div class="input-group-text">
+                                            <span class="bi bi-key-fill"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bottom-button">
+                                <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-lock-fill"></i>
+                                        Save Changes
+                                </button>
+                            </div>
+
+                        </div>
+
+                        <div class='column content-tab invitations' style="display: none;">
+
+                            <div class="card" style="height:29rem;">
+                                <div class="card-header">
+                                    Invitations
+                                  </div>
+                                  <div class="container" style="margin:1rem;width:96.5%;">
+                                    <table
+                                    class="table table-bordered"
+                                    data-toggle="table"
+                                    data-search="true"
+                                    data-search-align="left"
+                                    data-height="390">
+
+                                        <thead>
+                                            <tr>
+                                                <th data-sortable="true">Invite</th>
+                                                <th>Created By</th>
+                                                <th>Creation Date</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>0000000000000000</td>
+                                                <td>lorem_ipsum</td>
+                                                <td>2021-01-01</td>
+                                                <td>
+                                                    <span class="badge bg-success">Valid</span>
+
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>0000000000000000</td>
+                                                <td>solor_dolar</td>
+                                                <td>2021-01-01</td>
+                                                <td>
+                                                    <span class="badge bg-secondary">Invalid</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script src="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx" crossorigin="anonymous"></script>
+
+</html>
+
+{% endblock %}
